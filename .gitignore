@@ -1,0 +1,59 @@
+# Dependencies
+node_modules/
+
+# Expo
+.expo/
+dist/
+web-build/
+expo-env.d.ts
+
+# Generated native folders (config plugins only — never expo prebuild)
+/android
+/ios
+.kotlin/
+
+# Metro
+.metro-health-check*
+
+# Env / secrets — commit .env.example only, never real tokens
+.env
+.env.*
+!.env.example
+
+# Logs & debug
+npm-debug.*
+yarn-debug.*
+yarn-error.*
+*.log
+
+# TypeScript
+*.tsbuildinfo
+
+# Testing
+/coverage
+
+# OS
+.DS_Store
+*.stackdump
+Thumbs.db
+
+# IDE
+.idea/
+.vscode/
+
+# Reference repo (separate project, not part of this app)
+/likas/
+
+# Huge raw inputs (Phase 1 routing/overlay sources — kept locally, never committed;
+# the build pipeline emits the small, bundleable derivatives into assets/)
+data/maps/*.osm.pbf
+data/maps/MetroManila_Flood_100year.json
+
+# Native build artifacts / keys
+*.orig.*
+*.jks
+*.p8
+*.p12
+*.key
+*.mobileprovision
+*.hprof
