@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -9,15 +9,22 @@ import { LayerControl } from '@/components/map/LayerControl';
 import { Legend } from '@/components/map/Legend';
 import { MapErrorBoundary } from '@/components/map/MapErrorBoundary';
 import { Notice } from '@/components/map/Notice';
-import { SanLikasMap } from '@/components/map/SanLikasMap';
+import { SanLikasMap, type MapHandle } from '@/components/map/SanLikasMap';
+import { RouteOverlay } from '@/components/map/RouteOverlay';
+import { ChatPanel, type RouteResult } from '@/components/agent/ChatPanel';
 import type { FacilityPressEvent } from '@/components/map/FacilityLayers';
 import { loadAllFacilityLayers } from '@/lib/facilities/load';
+import { flattenFacilities } from '@/lib/facilities/flatten';
 import {
   FACILITY_TYPES,
   type FacilityLayerState,
   type FacilityProperties,
   type FacilityType,
 } from '@/lib/facilities/types';
+import type { LngLat } from '@/lib/geo/ncr';
+import type { RoutePath } from '@/lib/routing/types';
+import { DEMO_ORIGIN, getActiveHazards } from '@/lib/hazards/seed';
+import { useUserLocation } from '@/lib/location/useUserLocation';
 import { MAPBOX_TOKEN_PRESENT } from '@/lib/map/mapbox';
 import { useLayersStore } from '@/lib/state/layers';
 
@@ -46,6 +53,19 @@ export default function MapScreen() {
   const [selected, setSelected] = useState<FacilityProperties | null>(null);
   const [panelOpen, setPanelOpen] = useState(false);
 
+  // Agent / routing state.
+  const [chatOpen, setChatOpen] = useState(false);
+  const [route, setRoute] = useState<RoutePath | null>(null);
+  const [destination, setDestination] = useState<{ coordinate: LngLat; name: string } | null>(
+    null,
+  );
+  const [pinMode, setPinMode] = useState(false);
+  const mapHandle = useRef<MapHandle | null>(null);
+  const location = useUserLocation();
+
+  const facilities = useMemo(() => flattenFacilities(layers), [layers]);
+  const hazards = useMemo(() => getActiveHazards(), []);
+
   useEffect(() => {
     let cancelled = false;
     loadAllFacilityLayers(FACILITY_TYPES).then((result) => {
@@ -55,6 +75,28 @@ export default function MapScreen() {
       cancelled = true;
     };
   }, []);
+
+  const handleRoute = useCallback((result: RouteResult) => {
+    setRoute(result.route);
+    setDestination({
+      coordinate: result.facility.geometry.coordinates as LngLat,
+      name: result.facility.properties.name ?? 'Evacuation center',
+    });
+    mapHandle.current?.fitTo(result.route.coordinates);
+  }, []);
+
+  const handleMapPress = useCallback(
+    (coordinate: LngLat) => {
+      if (pinMode) {
+        location.setManual(coordinate);
+        setPinMode(false);
+        return;
+      }
+      setSelected(null);
+      setPanelOpen(false);
+    },
+    [pinMode, location],
+  );
 
   const fallBack = useCallback(() => {
     setSelected(null);
@@ -126,11 +168,16 @@ export default function MapScreen() {
           onFacilityPress={handleFacilityPress}
           onMapReady={() => setMapReady(true)}
           onMapLoadError={fallBack}
-          onMapPress={() => {
-            setSelected(null);
-            setPanelOpen(false);
-          }}
-        />
+          onMapPress={handleMapPress}
+          handleRef={mapHandle}
+        >
+          <RouteOverlay
+            origin={location.origin}
+            route={route}
+            destination={destination}
+            hazards={hazards}
+          />
+        </SanLikasMap>
       </MapErrorBoundary>
 
       {mapReady && <Legend visible={visible} />}
@@ -151,6 +198,43 @@ export default function MapScreen() {
           <Icon name="call-outline" size={22} color="#D7263D" />
         </Pressable>
       </View>
+
+      {pinMode && (
+        <Notice message="I-tap ang inyong lokasyon sa mapa" />
+      )}
+
+      {mapReady && !chatOpen && (
+        <Pressable
+          style={[styles.askButton, { bottom: insets.bottom + 20 }]}
+          onPress={() => setChatOpen(true)}
+          accessibilityLabel="Saan tayo lilikas?"
+        >
+          <Icon name="navigate" size={20} color="#FFFFFF" />
+          <Text style={styles.askLabel}>Saan tayo lilikas?</Text>
+        </Pressable>
+      )}
+
+      {chatOpen && (
+        <ChatPanel
+          origin={location.origin}
+          facilities={facilities}
+          onClose={() => setChatOpen(false)}
+          onRoute={handleRoute}
+          onRequestLocation={() => {
+            // Try GPS; if denied/outside NCR, let the user drop a pin.
+            location.request().then(() => {
+              if (location.state.status === 'denied' || location.state.status === 'outside-ncr') {
+                setPinMode(true);
+              }
+            });
+          }}
+          onUseDemoLocation={() => {
+            location.setManual(DEMO_ORIGIN);
+            mapHandle.current?.fitTo([DEMO_ORIGIN]);
+          }}
+          locationPending={location.state.status === 'requesting'}
+        />
+      )}
 
       {panelOpen && (
         <LayerControl
@@ -227,5 +311,26 @@ const styles = StyleSheet.create({
     color: '#F3A712',
     fontSize: 14,
     fontWeight: '600',
+  },
+  askButton: {
+    position: 'absolute',
+    alignSelf: 'center',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: '#D7263D',
+    paddingVertical: 14,
+    paddingHorizontal: 24,
+    borderRadius: 28,
+    shadowColor: '#000',
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 3 },
+    elevation: 8,
+  },
+  askLabel: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '700',
   },
 });
