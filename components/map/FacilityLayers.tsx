@@ -67,8 +67,8 @@ function FacilityLayer({
       id={`facility-src-${type}`}
       shape={state.collection}
       cluster
-      clusterRadius={45}
-      clusterMaxZoomLevel={15}
+      clusterRadius={60}
+      clusterMaxZoomLevel={14}
       onPress={handlePress}
     >
       <Mapbox.CircleLayer
@@ -76,9 +76,10 @@ function FacilityLayer({
         filter={[...CLUSTER_FILTER]}
         style={{
           circleColor: meta.color,
-          circleOpacity: 0.85,
-          circleRadius: ['step', ['get', 'point_count'], 14, 10, 18, 25, 22],
-          circleStrokeWidth: 2,
+          circleOpacity: 0.75,
+          // Compact clusters: 10 px base, growing modestly with count.
+          circleRadius: ['step', ['get', 'point_count'], 10, 10, 13, 50, 16],
+          circleStrokeWidth: 1.5,
           circleStrokeColor: '#FFFFFF',
         }}
       />
@@ -87,7 +88,7 @@ function FacilityLayer({
         filter={[...CLUSTER_FILTER]}
         style={{
           textField: ['get', 'point_count_abbreviated'],
-          textSize: 12,
+          textSize: 11,
           textColor: '#FFFFFF',
           textIgnorePlacement: true,
           textAllowOverlap: true,
@@ -98,8 +99,9 @@ function FacilityLayer({
         filter={[...POINT_FILTER]}
         style={{
           circleColor: meta.color,
-          circleRadius: 7,
-          circleStrokeWidth: 2,
+          circleOpacity: 0.9,
+          circleRadius: 5,
+          circleStrokeWidth: 1.5,
           circleStrokeColor: '#FFFFFF',
         }}
       />

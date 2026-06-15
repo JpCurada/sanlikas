@@ -13,37 +13,49 @@ const MODEL = 'gemini-2.5-flash';
 const MAX_ITERATIONS = 6;
 const WALL_CLOCK_MS = 30_000;
 
-const SYSTEM_PROMPT = `You are SanLikas, an evacuation assistant for Metro Manila, Philippines.
-The user asks where to evacuate (often "Saan tayo lilikas?"). Reply in the SAME language they used (Filipino, English, or Taglish).
+const SYSTEM_PROMPT = `You are SanLikas, an evacuation routing assistant for Metro Manila.
 
-Your job: recommend the SAFEST reachable evacuation center and explain why — not merely the nearest.
+ALWAYS use the tools. Never answer from your own knowledge. Never claim you lack information without first calling the tools.
 
-Process: check the latest weather, check official DRRM hazard reports near the user, then plan a hazard-aware route. Call the tools to do this; do not guess.
+For ANY request about evacuating, directions, or a specific center:
+1. Call get_weather_status.
+2. Call get_hazard_reports.
+3. Call route_to_safest_center. If the user named a specific center (e.g. "Toro Hills", "Delpan"), pass it as facility_name; otherwise omit it to get the safest center.
 
-Critical honesty rules:
-- A tool result of "empty" means "nothing reported" (genuinely clear). A result of "unavailable" means "could NOT be checked" — never treat unavailable as all-clear. Say explicitly when you could not check something.
-- If routing returns a compromised route (crosses a hazard), say so plainly and advise caution.
-- Always end with a short reminder to follow official LGU/DRRM instructions.
+Then answer in 2-3 short sentences, in the user's language (Filipino, English, or Taglish): name the center, the walking distance/time, and any hazard on the route. Calm and concise.
 
-Keep replies concise and calm — the user may be in an emergency. After you have routed, give a 2-3 sentence recommendation naming the center and the reason.`;
+Rules:
+- route_to_safest_center status "not_found" means that named center is not in the data: tell the user it was not found and offer to route to the safest center instead.
+- status "unavailable" means routing could not run, not "no route exists".
+- If the route is compromised (crosses a hazard), say so and advise caution.
+- End with a brief reminder to follow official LGU/DRRM instructions.`;
 
 const functionDeclarations: FunctionDeclaration[] = [
   {
     name: 'get_weather_status',
-    description: 'Get the latest weather and rainfall warning status for Metro Manila.',
+    description: 'Get the latest weather and rainfall-warning status for Metro Manila.',
     parameters: { type: Type.OBJECT, properties: {} },
   },
   {
     name: 'get_hazard_reports',
     description:
-      'Get the latest official DRRM hazard reports (e.g. floods) near the user. Returns status "empty" if none, "unavailable" if it could not be checked.',
+      'Get the latest official DRRM hazard reports (e.g. floods) near the user. Returns "empty" if none, "unavailable" if it could not be checked.',
     parameters: { type: Type.OBJECT, properties: {} },
   },
   {
     name: 'route_to_safest_center',
     description:
-      'Plan a hazard-aware walking route to the safest reachable evacuation center from the user location, avoiding reported hazards and flood-prone roads. Returns the chosen center, distance, walking time, and whether the route is compromised.',
-    parameters: { type: Type.OBJECT, properties: {} },
+      'Plan a hazard-aware walking route from the user location. If facility_name is given, routes to that named center; otherwise selects the safest reachable evacuation center. Returns the center, distance, walking time, and whether the route crosses a hazard.',
+    parameters: {
+      type: Type.OBJECT,
+      properties: {
+        facility_name: {
+          type: Type.STRING,
+          description:
+            'Optional. The specific evacuation center the user named (e.g. "Toro Hills"). Omit to get the safest center.',
+        },
+      },
+    },
   },
 ];
 
@@ -135,7 +147,8 @@ export async function* runAgentTurn(
         } else if (name === 'get_hazard_reports') {
           result = getHazardReports(ctx, origin);
         } else if (name === 'route_to_safest_center') {
-          const r = await routeToSafestCenter(ctx, origin);
+          const args = (part.functionCall!.args ?? {}) as { facility_name?: string };
+          const r = await routeToSafestCenter(ctx, origin, args.facility_name);
           if (r.ui) pendingRouteUi = r.ui;
           result = { status: r.status, summary: r.summary };
         } else {

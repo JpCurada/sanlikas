@@ -1,7 +1,7 @@
 import type { Feature, Point } from 'geojson';
 import type { LngLat } from '@/lib/geo/ncr';
 import type { FacilityProperties } from '@/lib/facilities/types';
-import { findSafestCenter } from '@/lib/routing/routeAsync';
+import { computeRoute, findSafestCenter } from '@/lib/routing/routeAsync';
 import { haversineMeters } from '@/lib/routing/geo';
 import type { HazardContext } from '@/lib/routing/hazardCost';
 import type { RoutePath } from '@/lib/routing/types';
@@ -59,7 +59,7 @@ export function getHazardReports(
 }
 
 export interface RouteToolResult {
-  status: 'ok' | 'unavailable';
+  status: 'ok' | 'unavailable' | 'not_found';
   /** Compact summary for Gemini. */
   summary?: {
     facilityName: string;
@@ -80,11 +80,17 @@ export interface RouteToolResult {
 export async function routeToSafestCenter(
   ctx: AgentContext,
   origin: LngLat,
+  facilityName?: string,
 ): Promise<RouteToolResult> {
   const hazardCtx: HazardContext = {
     hazards: ctx.hazards,
     rainWarningActive: ctx.rainWarningActive,
   };
+
+  // If the user named a specific center, route directly to it (hazard-aware).
+  if (facilityName && facilityName.trim()) {
+    return routeToNamed(ctx, origin, hazardCtx, facilityName.trim());
+  }
 
   try {
     const result = await findSafestCenter(origin, ctx.facilities, hazardCtx);
@@ -105,6 +111,53 @@ export async function routeToSafestCenter(
         tradeoff,
       },
       ui: { route: chosen.route, facility: chosen.facility, tradeoff },
+    };
+  } catch {
+    return { status: 'unavailable' };
+  }
+}
+
+/** Route to a facility the user named (case-insensitive substring match). */
+async function routeToNamed(
+  ctx: AgentContext,
+  origin: LngLat,
+  hazardCtx: HazardContext,
+  query: string,
+): Promise<RouteToolResult> {
+  const q = query.toLowerCase();
+  const matches = ctx.facilities.filter((f) =>
+    (f.properties.name ?? '').toLowerCase().includes(q),
+  );
+  if (matches.length === 0) return { status: 'not_found' };
+
+  // Closest match by straight-line distance if several share the name.
+  const facility = matches.sort(
+    (a, b) =>
+      haversineMeters(origin, a.geometry.coordinates as LngLat) -
+      haversineMeters(origin, b.geometry.coordinates as LngLat),
+  )[0];
+
+  try {
+    const route = await computeRoute(
+      origin,
+      facility.geometry.coordinates as LngLat,
+      hazardCtx,
+    );
+    const name = facility.properties.name ?? query;
+    const tradeoff = route.compromised
+      ? `The route to ${name} crosses a reported hazard. Proceed with caution and follow local DRRM instructions.`
+      : `Clear route to ${name}.`;
+    return {
+      status: 'ok',
+      summary: {
+        facilityName: name,
+        distanceMeters: Math.round(route.distanceMeters),
+        durationMinutesWalking: route.durationMinutesWalking,
+        compromised: route.compromised,
+        crossedHazards: route.crossedHazards.map((h) => h.kind),
+        tradeoff,
+      },
+      ui: { route, facility, tradeoff },
     };
   } catch {
     return { status: 'unavailable' };

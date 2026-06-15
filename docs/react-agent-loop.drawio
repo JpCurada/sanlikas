@@ -1,0 +1,67 @@
+<mxfile host="app.diagrams.net" type="device">
+  <diagram name="ReAct Agent Loop" id="react-loop">
+    <mxGraphModel dx="900" dy="700" grid="0" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="700" pageHeight="800" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+
+        <!-- INPUT -->
+        <mxCell id="input" value="Input" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;strokeWidth=2;fontColor=#000000;fontSize=18;sketch=1;curveFitting=1;jiggle=2;" vertex="1" parent="1">
+          <mxGeometry x="120" y="60" width="180" height="80" as="geometry" />
+        </mxCell>
+
+        <!-- AGENT -->
+        <mxCell id="agent" value="Agent" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;strokeWidth=2;fontColor=#000000;fontSize=18;fontStyle=2;arcSize=20;sketch=1;curveFitting=1;jiggle=2;" vertex="1" parent="1">
+          <mxGeometry x="100" y="280" width="220" height="100" as="geometry" />
+        </mxCell>
+
+        <!-- TOOL EXECUTION -->
+        <mxCell id="tools" value="Tool Execution" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;strokeWidth=2;fontColor=#000000;fontSize=16;arcSize=20;sketch=1;curveFitting=1;jiggle=2;" vertex="1" parent="1">
+          <mxGeometry x="440" y="280" width="200" height="100" as="geometry" />
+        </mxCell>
+
+        <!-- TOOL LIST (SanLikas-specific, subtle) -->
+        <mxCell id="toollist" value="Weather&#10;Hazard Reports&#10;A* Planner" style="text;html=1;fontSize=13;fontColor=#000000;align=center;verticalAlign=top;fontStyle=2;" vertex="1" parent="1">
+          <mxGeometry x="440" y="392" width="200" height="64" as="geometry" />
+        </mxCell>
+
+        <!-- OUTPUT -->
+        <mxCell id="output" value="Output" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;strokeWidth=2;fontColor=#000000;fontSize=18;sketch=1;curveFitting=1;jiggle=2;" vertex="1" parent="1">
+          <mxGeometry x="120" y="560" width="180" height="80" as="geometry" />
+        </mxCell>
+
+        <!-- ===== EDGES ===== -->
+        <!-- Input -> Agent -->
+        <mxCell id="e_in_agent" value="" style="endArrow=block;html=1;strokeColor=#000000;strokeWidth=2;sketch=1;curved=1;exitX=0.5;exitY=1;entryX=0.5;entryY=0;" edge="1" parent="1" source="input" target="agent">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- Agent -> Tools : Action (dashed, top arc) -->
+        <mxCell id="e_action" value="Action" style="endArrow=block;html=1;strokeColor=#000000;strokeWidth=2;dashed=1;sketch=1;curved=1;fontColor=#000000;fontSize=15;fontStyle=2;exitX=0.75;exitY=0;entryX=0.5;entryY=0;" edge="1" parent="1" source="agent" target="tools">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="270" y="220" />
+              <mxPoint x="540" y="220" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+
+        <!-- Tools -> Agent : Observation (solid, bottom arc) -->
+        <mxCell id="e_observe" value="Observation" style="endArrow=block;html=1;strokeColor=#000000;strokeWidth=2;sketch=1;curved=1;fontColor=#000000;fontSize=15;fontStyle=2;exitX=0.5;exitY=1;entryX=0.85;entryY=1;" edge="1" parent="1" source="tools" target="agent">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="540" y="450" />
+              <mxPoint x="270" y="450" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+
+        <!-- Agent -> Output -->
+        <mxCell id="e_agent_out" value="" style="endArrow=block;html=1;strokeColor=#000000;strokeWidth=2;sketch=1;curved=1;exitX=0.5;exitY=1;entryX=0.5;entryY=0;" edge="1" parent="1" source="agent" target="output">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
