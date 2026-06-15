@@ -6,6 +6,7 @@ import {
   type FacilityLayerState,
   type FacilityType,
 } from '@/lib/facilities/types';
+import { COLORS, RADIUS, SHADOW } from '@/lib/theme';
 
 interface LayerControlProps {
   layers: Record<FacilityType, FacilityLayerState>;
@@ -17,11 +18,11 @@ interface LayerControlProps {
 function statusHint(state: FacilityLayerState): string | null {
   switch (state.status) {
     case 'error':
-      return 'Layer unavailable — data failed to load';
+      return 'Layer unavailable. Data failed to load.';
     case 'empty':
       return 'No facilities of this type recorded in Metro Manila';
     case 'loading':
-      return 'Loading…';
+      return 'Loading';
     default:
       return null;
   }
@@ -36,8 +37,13 @@ export function LayerControl({ layers, visible, onToggle, onClose }: LayerContro
     <View style={styles.panel}>
       <View style={styles.header}>
         <Text style={styles.title}>Facility layers</Text>
-        <Pressable onPress={onClose} hitSlop={12} accessibilityLabel="Close layer control">
-          <Icon name="close" size={22} color="#52606D" />
+        <Pressable
+          style={styles.closeButton}
+          onPress={onClose}
+          hitSlop={12}
+          accessibilityLabel="Close layer control"
+        >
+          <Icon name="close" size={18} color={COLORS.ink} />
         </Pressable>
       </View>
       {FACILITY_TYPES.map((type) => {
@@ -72,17 +78,15 @@ const styles = StyleSheet.create({
   panel: {
     position: 'absolute',
     top: 60,
-    right: 12,
-    width: 290,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 14,
-    padding: 14,
-    gap: 10,
-    shadowColor: '#000',
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 2 },
-    elevation: 6,
+    right: 16,
+    width: 296,
+    backgroundColor: COLORS.bg,
+    borderRadius: RADIUS.lg,
+    padding: 16,
+    gap: 12,
+    borderWidth: 1,
+    borderColor: COLORS.line,
+    ...SHADOW.card,
   },
   header: {
     flexDirection: 'row',
@@ -90,21 +94,30 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   title: {
-    fontSize: 15,
+    fontSize: 16,
     fontWeight: '700',
-    color: '#1F2933',
+    color: COLORS.ink,
+    letterSpacing: -0.2,
+  },
+  closeButton: {
+    width: 32,
+    height: 32,
+    borderRadius: RADIUS.pill,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: COLORS.bgSoft,
   },
   row: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
+    gap: 12,
   },
   rowDisabled: {
     opacity: 0.45,
   },
   dot: {
-    width: 12,
-    height: 12,
+    width: 11,
+    height: 11,
     borderRadius: 6,
   },
   labelBlock: {
@@ -113,10 +126,11 @@ const styles = StyleSheet.create({
   },
   label: {
     fontSize: 14,
-    color: '#1F2933',
+    color: COLORS.ink,
+    fontWeight: '500',
   },
   hint: {
     fontSize: 11,
-    color: '#9AA5B1',
+    color: COLORS.muted,
   },
 });

@@ -28,6 +28,7 @@ import { useHazards } from '@/lib/hazards/useHazards';
 import { useUserLocation } from '@/lib/location/useUserLocation';
 import { MAPBOX_TOKEN_PRESENT } from '@/lib/map/mapbox';
 import { useLayersStore } from '@/lib/state/layers';
+import { COLORS, RADIUS, SHADOW } from '@/lib/theme';
 
 const INITIAL_LAYERS = Object.fromEntries(
   FACILITY_TYPES.map((type) => [type, { status: 'loading', collection: null }]),
@@ -92,7 +93,7 @@ export default function MapScreen() {
   const handleMapPress = useCallback(
     (coordinate: LngLat) => {
       if (pinMode) {
-        location.setManual(coordinate);
+        location.setManual(coordinate, 'Naka-pin na lokasyon');
         setPinMode(false);
         return;
       }
@@ -124,13 +125,13 @@ export default function MapScreen() {
   }, []);
 
   if (!hasHydrated) {
-    return <LoadingOverlay message="Loading…" />;
+    return <LoadingOverlay message="Loading" />;
   }
 
   if (!MAPBOX_TOKEN_PRESENT) {
     return (
       <View style={styles.fatal}>
-        <Icon name="key-outline" size={36} color="#9AA5B1" />
+        <Icon name="key-outline" size={36} color={COLORS.muted} />
         <Text style={styles.fatalTitle}>Map token missing</Text>
         <Text style={styles.fatalText}>
           EXPO_PUBLIC_MAPBOX_TOKEN is not configured. Copy .env.example to .env, fill in your
@@ -143,7 +144,7 @@ export default function MapScreen() {
   if (fatal) {
     return (
       <View style={styles.fatal}>
-        <Icon name="cloud-offline-outline" size={36} color="#9AA5B1" />
+        <Icon name="cloud-offline-outline" size={36} color={COLORS.muted} />
         <Text style={styles.fatalTitle}>Map unavailable</Text>
         <Text style={styles.fatalText}>
           The map could not load. Check your connection and try again.
@@ -163,7 +164,7 @@ export default function MapScreen() {
       <MapErrorBoundary
         key={`${mode}-${retryKey}`}
         onError={fallBack}
-        fallback={<LoadingOverlay message="Switching to 2D map…" />}
+        fallback={<LoadingOverlay message="Switching to 2D map" />}
       >
         <SanLikasMap
           mode={mode}
@@ -192,14 +193,14 @@ export default function MapScreen() {
           onPress={() => setPanelOpen((open) => !open)}
           accessibilityLabel="Toggle facility layers"
         >
-          <Icon name="layers-outline" size={22} color="#1F2933" />
+          <Icon name="layers-outline" size={22} color={COLORS.ink} />
         </Pressable>
         <Pressable
           style={styles.actionButton}
           onPress={() => router.push('/hotlines')}
           accessibilityLabel="Emergency hotlines"
         >
-          <Icon name="call-outline" size={22} color="#D7263D" />
+          <Icon name="call-outline" size={22} color={COLORS.danger} />
         </Pressable>
       </View>
 
@@ -213,7 +214,7 @@ export default function MapScreen() {
           onPress={() => setChatOpen(true)}
           accessibilityLabel="Saan tayo lilikas?"
         >
-          <Icon name="navigate" size={20} color="#FFFFFF" />
+          <Icon name="navigate" size={20} color={COLORS.white} />
           <Text style={styles.askLabel}>Saan tayo lilikas?</Text>
         </Pressable>
       )}
@@ -221,11 +222,12 @@ export default function MapScreen() {
       {chatOpen && (
         <ChatPanel
           origin={location.origin}
+          originLabel={location.originLabel}
           facilities={facilities}
           onClose={() => setChatOpen(false)}
           onRoute={handleRoute}
           onRequestLocation={() => {
-            // Try GPS; if denied/outside NCR, let the user drop a pin.
+            // Try GPS; if denied/outside NCR, prompt the search instead.
             location.request().then(() => {
               if (location.state.status === 'denied' || location.state.status === 'outside-ncr') {
                 setPinMode(true);
@@ -233,8 +235,12 @@ export default function MapScreen() {
             });
           }}
           onUseDemoLocation={() => {
-            location.setManual(DEMO_ORIGIN);
+            location.setManual(DEMO_ORIGIN, 'Demo (Sampaloc, Manila)');
             mapHandle.current?.fitTo([DEMO_ORIGIN]);
+          }}
+          onPickLocation={(coordinate, name) => {
+            location.setManual(coordinate, name);
+            mapHandle.current?.fitTo([coordinate]);
           }}
           locationPending={location.state.status === 'requesting'}
         />
@@ -251,7 +257,7 @@ export default function MapScreen() {
 
       {selected && <FacilityPopup properties={selected} onClose={() => setSelected(null)} />}
 
-      {mode === '2d' && mapReady && <Notice message="3D view unavailable — showing 2D map" />}
+      {mode === '2d' && mapReady && <Notice message="3D view unavailable. Showing 2D map." />}
 
       {!mapReady && <LoadingOverlay />}
     </View>
@@ -259,52 +265,51 @@ export default function MapScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#0B1D2A' },
+  container: { flex: 1, backgroundColor: COLORS.bgSoft },
   actions: {
     position: 'absolute',
-    right: 12,
-    gap: 8,
+    right: 16,
+    gap: 10,
   },
   actionButton: {
-    width: 42,
-    height: 42,
-    borderRadius: 21,
-    backgroundColor: '#FFFFFF',
+    width: 46,
+    height: 46,
+    borderRadius: RADIUS.pill,
+    backgroundColor: COLORS.bg,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#000',
-    shadowOpacity: 0.2,
-    shadowRadius: 6,
-    shadowOffset: { width: 0, height: 2 },
-    elevation: 5,
+    borderWidth: 1,
+    borderColor: COLORS.line,
+    ...SHADOW.card,
   },
   fatal: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#0B1D2A',
+    backgroundColor: COLORS.bg,
     padding: 32,
     gap: 12,
   },
   fatalTitle: {
-    color: '#E5EAF0',
-    fontSize: 18,
+    color: COLORS.ink,
+    fontSize: 19,
     fontWeight: '700',
   },
   fatalText: {
-    color: '#9AA5B1',
+    color: COLORS.muted,
     fontSize: 14,
     textAlign: 'center',
+    lineHeight: 20,
   },
   retryButton: {
     marginTop: 8,
-    backgroundColor: '#2E86AB',
-    borderRadius: 10,
-    paddingVertical: 10,
-    paddingHorizontal: 28,
+    backgroundColor: COLORS.brand,
+    borderRadius: RADIUS.sm,
+    paddingVertical: 13,
+    paddingHorizontal: 30,
   },
   retryLabel: {
-    color: '#FFFFFF',
+    color: COLORS.white,
     fontSize: 15,
     fontWeight: '600',
   },
@@ -312,7 +317,7 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
   },
   hotlinesLinkLabel: {
-    color: '#F3A712',
+    color: COLORS.brand,
     fontSize: 14,
     fontWeight: '600',
   },
@@ -322,18 +327,14 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    backgroundColor: '#D7263D',
-    paddingVertical: 14,
-    paddingHorizontal: 24,
-    borderRadius: 28,
-    shadowColor: '#000',
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 3 },
-    elevation: 8,
+    backgroundColor: COLORS.brand,
+    paddingVertical: 15,
+    paddingHorizontal: 26,
+    borderRadius: RADIUS.pill,
+    ...SHADOW.card,
   },
   askLabel: {
-    color: '#FFFFFF',
+    color: COLORS.white,
     fontSize: 16,
     fontWeight: '700',
   },

@@ -1,6 +1,7 @@
 import { Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Icon } from '@/components/Icon';
 import { HOTLINES } from '@/lib/hotlines';
+import { COLORS, RADIUS, SHADOW } from '@/lib/theme';
 
 /**
  * Static emergency hotlines screen — zero network and zero agent dependencies
@@ -29,7 +30,7 @@ export default function HotlinesScreen() {
               });
             }}
           >
-            <Icon name="call" size={22} color="#FFFFFF" />
+            <Icon name="call" size={20} color={COLORS.white} />
           </Pressable>
         </View>
       ))}
@@ -40,14 +41,14 @@ export default function HotlinesScreen() {
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
-    backgroundColor: '#0B1D2A',
+    backgroundColor: COLORS.bgSoft,
   },
   content: {
     padding: 16,
     gap: 12,
   },
   intro: {
-    color: '#9AA5B1',
+    color: COLORS.muted,
     fontSize: 13,
     lineHeight: 19,
     marginBottom: 4,
@@ -55,36 +56,39 @@ const styles = StyleSheet.create({
   card: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#13293D',
-    borderRadius: 14,
+    backgroundColor: COLORS.bg,
+    borderRadius: RADIUS.md,
     padding: 16,
     gap: 12,
+    borderWidth: 1,
+    borderColor: COLORS.line,
+    ...SHADOW.card,
   },
   cardText: {
     flex: 1,
     gap: 3,
   },
   agency: {
-    color: '#E5EAF0',
+    color: COLORS.ink,
     fontSize: 16,
     fontWeight: '700',
   },
   description: {
-    color: '#9AA5B1',
+    color: COLORS.muted,
     fontSize: 12,
     lineHeight: 17,
   },
   number: {
-    color: '#F3A712',
+    color: COLORS.brand,
     fontSize: 15,
-    fontWeight: '600',
+    fontWeight: '700',
     marginTop: 2,
   },
   callButton: {
     width: 48,
     height: 48,
-    borderRadius: 24,
-    backgroundColor: '#D7263D',
+    borderRadius: RADIUS.pill,
+    backgroundColor: COLORS.danger,
     alignItems: 'center',
     justifyContent: 'center',
   },

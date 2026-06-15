@@ -44,6 +44,18 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
         RNMapboxMapsDownloadToken: process.env.RNMAPBOX_DOWNLOAD_TOKEN,
       },
     ],
+    [
+      'expo-location',
+      {
+        // Foreground only — location is read on demand when the user asks for a
+        // route, never in the background. Message shown in the OS permission prompt.
+        locationAlwaysAndWhenInUsePermission: false,
+        locationWhenInUsePermission:
+          'SanLikas uses your location to find the safest nearby evacuation center and route you there. You can also search or pin your location instead.',
+        isAndroidForegroundServiceEnabled: false,
+        isAndroidBackgroundLocationEnabled: false,
+      },
+    ],
   ],
   experiments: {
     typedRoutes: true,

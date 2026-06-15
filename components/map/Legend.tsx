@@ -52,6 +52,7 @@ const styles = StyleSheet.create({
   },
   label: {
     fontSize: 11,
-    color: '#3E4C59',
+    color: '#44544c',
+    fontWeight: '500',
   },
 });

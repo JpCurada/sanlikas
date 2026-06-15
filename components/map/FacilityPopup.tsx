@@ -7,6 +7,7 @@ import {
   formatName,
 } from '@/lib/facilities/format';
 import { FACILITY_META, type FacilityProperties, type FacilityType } from '@/lib/facilities/types';
+import { COLORS, RADIUS, SHADOW } from '@/lib/theme';
 
 interface FacilityPopupProps {
   properties: FacilityProperties;
@@ -22,13 +23,19 @@ export function FacilityPopup({ properties, onClose }: FacilityPopupProps) {
 
   return (
     <View style={styles.card}>
+      <View style={styles.handle} />
       <View style={styles.header}>
-        <View style={[styles.dot, { backgroundColor: meta?.color ?? '#52606D' }]} />
+        <View style={[styles.dot, { backgroundColor: meta?.color ?? COLORS.muted }]} />
         <Text style={styles.title} numberOfLines={2}>
           {formatName(properties)}
         </Text>
-        <Pressable onPress={onClose} hitSlop={12} accessibilityLabel="Close details">
-          <Icon name="close" size={22} color="#52606D" />
+        <Pressable
+          style={styles.closeButton}
+          onPress={onClose}
+          hitSlop={12}
+          accessibilityLabel="Close details"
+        >
+          <Icon name="close" size={18} color={COLORS.ink} />
         </Pressable>
       </View>
       {meta && <Text style={styles.type}>{meta.label}</Text>}
@@ -45,39 +52,56 @@ const styles = StyleSheet.create({
     left: 12,
     right: 12,
     bottom: 16,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 14,
-    padding: 16,
+    backgroundColor: COLORS.bg,
+    borderRadius: RADIUS.lg,
+    paddingHorizontal: 18,
+    paddingTop: 10,
+    paddingBottom: 18,
     gap: 6,
-    shadowColor: '#000',
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 2 },
-    elevation: 6,
+    ...SHADOW.floating,
+  },
+  handle: {
+    alignSelf: 'center',
+    width: 40,
+    height: 4,
+    borderRadius: RADIUS.pill,
+    backgroundColor: COLORS.lineStrong,
+    marginBottom: 12,
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: 10,
   },
   dot: {
-    width: 12,
-    height: 12,
-    borderRadius: 6,
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+  },
+  closeButton: {
+    width: 32,
+    height: 32,
+    borderRadius: RADIUS.pill,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: COLORS.bgSoft,
   },
   title: {
     flex: 1,
     fontSize: 16,
     fontWeight: '700',
-    color: '#1F2933',
+    color: COLORS.ink,
+    letterSpacing: -0.2,
   },
   type: {
     fontSize: 13,
-    color: '#52606D',
+    color: COLORS.brand,
     fontWeight: '600',
+    marginBottom: 2,
   },
   row: {
     fontSize: 14,
-    color: '#3E4C59',
+    color: COLORS.body,
+    lineHeight: 20,
   },
 });

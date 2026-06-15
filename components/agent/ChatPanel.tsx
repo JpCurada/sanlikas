@@ -18,6 +18,8 @@ import { fetchActiveHazards } from '@/lib/hazards/source';
 import { runAgentTurn } from '@/lib/agent/loop';
 import { GEMINI_API_KEY, GEMINI_KEY_PRESENT } from '@/lib/agent/config';
 import type { AgentContext, NearestCenter } from '@/lib/agent/types';
+import { COLORS, RADIUS, SHADOW } from '@/lib/theme';
+import { LocationSearch } from './LocationSearch';
 
 export interface RouteResult {
   route: RoutePath;
@@ -26,11 +28,13 @@ export interface RouteResult {
 
 interface ChatPanelProps {
   origin: LngLat | null;
+  originLabel: string | null;
   facilities: Feature<Point, FacilityProperties>[];
   onClose: () => void;
   onRoute: (result: RouteResult) => void;
   onRequestLocation: () => void;
   onUseDemoLocation: () => void;
+  onPickLocation: (coordinate: LngLat, name: string) => void;
   locationPending: boolean;
 }
 
@@ -44,11 +48,13 @@ const SUGGESTED = 'Saan tayo lilikas?';
 
 export function ChatPanel({
   origin,
+  originLabel,
   facilities,
   onClose,
   onRoute,
   onRequestLocation,
   onUseDemoLocation,
+  onPickLocation,
   locationPending,
 }: ChatPanelProps) {
   const [bubbles, setBubbles] = useState<Bubble[]>([]);
@@ -89,7 +95,6 @@ export function ChatPanel({
       try {
         for await (const ev of runAgentTurn(GEMINI_API_KEY, text, ctx)) {
           if (ev.type === 'status') {
-            // Replace any prior status bubble with the latest.
             setBubbles((b) => [
               ...b.filter((x) => x.role !== 'status'),
               { id: nextId(), role: 'status', text: ev.label },
@@ -123,32 +128,52 @@ export function ChatPanel({
 
   return (
     <View style={styles.panel}>
+      <View style={styles.handle} />
+
       <View style={styles.header}>
-        <Text style={styles.title}>Saan Tayo Lilikas?</Text>
-        <Pressable onPress={onClose} accessibilityLabel="Close assistant">
-          <Icon name="close" size={22} color="#1F2933" />
+        <View>
+          <Text style={styles.title}>Evacuation assistant</Text>
+          <Text style={styles.subtitle}>Saan tayo lilikas?</Text>
+        </View>
+        <Pressable style={styles.closeButton} onPress={onClose} accessibilityLabel="Close assistant">
+          <Icon name="close" size={20} color={COLORS.ink} />
         </Pressable>
       </View>
 
-      {!origin && (
-        <View style={styles.locationRow}>
-          <Pressable
-            style={styles.locationBanner}
-            onPress={onRequestLocation}
-            disabled={locationPending}
-          >
-            {locationPending ? (
-              <ActivityIndicator color="#2E86AB" />
-            ) : (
-              <Icon name="location-outline" size={18} color="#2E86AB" />
-            )}
-            <Text style={styles.locationText}>
-              {locationPending ? 'Hinahanap ang lokasyon…' : 'Gamitin ang lokasyon ko'}
-            </Text>
+      {origin ? (
+        <View style={styles.locationChip}>
+          <Icon name="location" size={15} color={COLORS.brand} />
+          <Text style={styles.locationChipText} numberOfLines={1}>
+            {originLabel ?? 'Lokasyon nakatakda'}
+          </Text>
+          <Pressable onPress={onRequestLocation} hitSlop={8}>
+            <Text style={styles.locationChange}>Palitan</Text>
           </Pressable>
-          <Pressable style={styles.demoButton} onPress={onUseDemoLocation}>
-            <Text style={styles.demoButtonText}>Demo (Manila)</Text>
-          </Pressable>
+        </View>
+      ) : (
+        <View style={styles.locationCard}>
+          <Text style={styles.locationHeading}>Saan kayo naroroon?</Text>
+          <View style={styles.locationButtons}>
+            <Pressable
+              style={styles.primaryLocation}
+              onPress={onRequestLocation}
+              disabled={locationPending}
+            >
+              {locationPending ? (
+                <ActivityIndicator color={COLORS.white} size="small" />
+              ) : (
+                <Icon name="navigate" size={16} color={COLORS.white} />
+              )}
+              <Text style={styles.primaryLocationText}>
+                {locationPending ? 'Hinahanap' : 'Gamitin ang GPS'}
+              </Text>
+            </Pressable>
+            <Pressable style={styles.ghostLocation} onPress={onUseDemoLocation}>
+              <Text style={styles.ghostLocationText}>Demo</Text>
+            </Pressable>
+          </View>
+          <Text style={styles.orLabel}>o hanapin ang inyong lugar</Text>
+          <LocationSearch onPick={onPickLocation} />
         </View>
       )}
 
@@ -157,10 +182,12 @@ export function ChatPanel({
         keyExtractor={(b) => b.id}
         style={styles.list}
         contentContainerStyle={styles.listContent}
-        renderItem={({ item }) => <BubbleView bubble={item} onRoute={() => {}} />}
+        keyboardShouldPersistTaps="handled"
+        renderItem={({ item }) => <BubbleView bubble={item} />}
         ListEmptyComponent={
           <Pressable style={styles.suggestion} onPress={() => send(SUGGESTED)}>
-            <Text style={styles.suggestionText}>“{SUGGESTED}”</Text>
+            <Icon name="navigate-outline" size={16} color={COLORS.brand} />
+            <Text style={styles.suggestionText}>{SUGGESTED}</Text>
           </Pressable>
         }
       />
@@ -170,8 +197,8 @@ export function ChatPanel({
           style={styles.input}
           value={input}
           onChangeText={setInput}
-          placeholder="Magtanong…"
-          placeholderTextColor="#9AA5B1"
+          placeholder="Magtanong"
+          placeholderTextColor={COLORS.muted}
           editable={!busy}
           onSubmitEditing={() => send(input)}
           returnKeyType="send"
@@ -182,9 +209,9 @@ export function ChatPanel({
           disabled={busy}
         >
           {busy ? (
-            <ActivityIndicator color="#FFFFFF" size="small" />
+            <ActivityIndicator color={COLORS.white} size="small" />
           ) : (
-            <Icon name="send" size={18} color="#FFFFFF" />
+            <Icon name="arrow-up" size={20} color={COLORS.white} />
           )}
         </Pressable>
       </View>
@@ -192,11 +219,11 @@ export function ChatPanel({
   );
 }
 
-function BubbleView({ bubble }: { bubble: Bubble; onRoute: () => void }) {
+function BubbleView({ bubble }: { bubble: Bubble }) {
   if (bubble.role === 'status') {
     return (
       <View style={styles.statusBubble}>
-        <ActivityIndicator size="small" color="#627D98" />
+        <ActivityIndicator size="small" color={COLORS.muted} />
         <Text style={styles.statusText}>{bubble.text}</Text>
       </View>
     );
@@ -204,12 +231,15 @@ function BubbleView({ bubble }: { bubble: Bubble; onRoute: () => void }) {
   if (bubble.role === 'fallback') {
     return (
       <View style={styles.agentBubble}>
-        <Text style={styles.fallbackHeader}>Pinakamalapit na mga sentro:</Text>
+        <Text style={styles.fallbackHeader}>Pinakamalapit na mga sentro</Text>
         {bubble.centers.map((c, i) => (
-          <Text key={i} style={styles.fallbackItem}>
-            {i + 1}. {c.facility.properties.name ?? 'Evacuation center'} —{' '}
-            {(c.straightLineMeters / 1000).toFixed(1)} km
-          </Text>
+          <View key={i} style={styles.fallbackRow}>
+            <Text style={styles.fallbackRank}>{i + 1}</Text>
+            <Text style={styles.fallbackName} numberOfLines={1}>
+              {c.facility.properties.name ?? 'Evacuation center'}
+            </Text>
+            <Text style={styles.fallbackDist}>{(c.straightLineMeters / 1000).toFixed(1)} km</Text>
+          </View>
         ))}
       </View>
     );
@@ -228,98 +258,172 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    maxHeight: '62%',
-    backgroundColor: '#F4F6F8',
-    borderTopLeftRadius: 18,
-    borderTopRightRadius: 18,
-    paddingBottom: 12,
-    shadowColor: '#000',
-    shadowOpacity: 0.2,
-    shadowRadius: 12,
-    shadowOffset: { width: 0, height: -2 },
-    elevation: 12,
+    maxHeight: '70%',
+    backgroundColor: COLORS.bgSoft,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    paddingBottom: 14,
+    ...SHADOW.floating,
+  },
+  handle: {
+    alignSelf: 'center',
+    width: 40,
+    height: 4,
+    borderRadius: RADIUS.pill,
+    backgroundColor: COLORS.lineStrong,
+    marginTop: 10,
+    marginBottom: 4,
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 16,
+    paddingHorizontal: 20,
     paddingVertical: 12,
   },
-  title: { fontSize: 16, fontWeight: '700', color: '#1F2933' },
-  locationRow: {
-    flexDirection: 'row',
-    gap: 8,
-    marginHorizontal: 16,
-    marginBottom: 8,
+  title: { fontSize: 18, fontWeight: '700', color: COLORS.ink, letterSpacing: -0.3 },
+  subtitle: { fontSize: 13, color: COLORS.muted, marginTop: 2 },
+  closeButton: {
+    width: 36,
+    height: 36,
+    borderRadius: RADIUS.pill,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: COLORS.bg,
+    borderWidth: 1,
+    borderColor: COLORS.line,
   },
-  locationBanner: {
-    flex: 1,
+
+  // Location set: compact chip
+  locationChip: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    padding: 10,
-    borderRadius: 10,
-    backgroundColor: '#E3F0F6',
-  },
-  locationText: { flex: 1, color: '#2E86AB', fontSize: 13 },
-  demoButton: {
-    justifyContent: 'center',
-    paddingHorizontal: 14,
-    borderRadius: 10,
-    backgroundColor: '#1B998B',
-  },
-  demoButtonText: { color: '#FFFFFF', fontSize: 13, fontWeight: '600' },
-  list: { flexGrow: 0 },
-  listContent: { paddingHorizontal: 16, gap: 8, paddingBottom: 8 },
-  suggestion: {
-    alignSelf: 'center',
-    marginTop: 8,
+    marginHorizontal: 20,
+    marginBottom: 10,
     paddingVertical: 10,
-    paddingHorizontal: 16,
-    borderRadius: 20,
-    backgroundColor: '#E4ECF2',
+    paddingHorizontal: 14,
+    borderRadius: RADIUS.sm,
+    backgroundColor: COLORS.bg,
+    borderWidth: 1,
+    borderColor: COLORS.line,
   },
-  suggestionText: { color: '#486581', fontSize: 14, fontStyle: 'italic' },
-  bubble: { maxWidth: '85%', padding: 12, borderRadius: 14 },
-  userBubble: { alignSelf: 'flex-end', backgroundColor: '#2E86AB' },
-  agentBubble: { alignSelf: 'flex-start', backgroundColor: '#FFFFFF' },
-  userText: { color: '#FFFFFF', fontSize: 14 },
-  agentText: { color: '#1F2933', fontSize: 14, lineHeight: 20 },
+  locationChipText: { flex: 1, color: COLORS.body, fontSize: 13 },
+  locationChange: { color: COLORS.brand, fontSize: 13, fontWeight: '600' },
+
+  // Location not set: card with options
+  locationCard: {
+    marginHorizontal: 16,
+    marginBottom: 10,
+    padding: 16,
+    borderRadius: RADIUS.md,
+    backgroundColor: COLORS.bg,
+    borderWidth: 1,
+    borderColor: COLORS.line,
+  },
+  locationHeading: { fontSize: 15, fontWeight: '700', color: COLORS.ink, marginBottom: 12 },
+  locationButtons: { flexDirection: 'row', gap: 10, marginBottom: 14 },
+  primaryLocation: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    backgroundColor: COLORS.brand,
+    borderRadius: RADIUS.sm,
+    paddingVertical: 13,
+  },
+  primaryLocationText: { color: COLORS.white, fontWeight: '600', fontSize: 14 },
+  ghostLocation: {
+    paddingHorizontal: 20,
+    justifyContent: 'center',
+    borderRadius: RADIUS.sm,
+    borderWidth: 1,
+    borderColor: COLORS.lineStrong,
+    backgroundColor: COLORS.bg,
+  },
+  ghostLocationText: { color: COLORS.ink, fontWeight: '600', fontSize: 14 },
+  orLabel: { textAlign: 'center', color: COLORS.muted, fontSize: 12, marginBottom: 10 },
+
+  list: { flexGrow: 0 },
+  listContent: { paddingHorizontal: 20, gap: 10, paddingBottom: 8 },
+  suggestion: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    alignSelf: 'center',
+    marginTop: 10,
+    paddingVertical: 12,
+    paddingHorizontal: 18,
+    borderRadius: RADIUS.pill,
+    backgroundColor: COLORS.bg,
+    borderWidth: 1,
+    borderColor: COLORS.lineStrong,
+  },
+  suggestionText: { color: COLORS.ink, fontSize: 14, fontWeight: '600' },
+
+  bubble: { maxWidth: '86%', paddingVertical: 11, paddingHorizontal: 14, borderRadius: RADIUS.md },
+  userBubble: { alignSelf: 'flex-end', backgroundColor: COLORS.brand, borderBottomRightRadius: 4 },
+  agentBubble: {
+    alignSelf: 'flex-start',
+    backgroundColor: COLORS.bg,
+    borderWidth: 1,
+    borderColor: COLORS.line,
+    borderBottomLeftRadius: 4,
+  },
+  userText: { color: COLORS.white, fontSize: 14, lineHeight: 20 },
+  agentText: { color: COLORS.ink, fontSize: 14, lineHeight: 21 },
+
   statusBubble: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
     alignSelf: 'flex-start',
-    paddingVertical: 6,
-    paddingHorizontal: 4,
+    paddingVertical: 4,
   },
-  statusText: { color: '#627D98', fontSize: 13, fontStyle: 'italic' },
-  fallbackHeader: { fontWeight: '700', color: '#1F2933', marginBottom: 4, fontSize: 14 },
-  fallbackItem: { color: '#334E68', fontSize: 13, lineHeight: 20 },
+  statusText: { color: COLORS.muted, fontSize: 13 },
+
+  fallbackHeader: { fontWeight: '700', color: COLORS.ink, marginBottom: 8, fontSize: 14 },
+  fallbackRow: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 5 },
+  fallbackRank: {
+    width: 20,
+    height: 20,
+    borderRadius: RADIUS.pill,
+    backgroundColor: COLORS.bgSoft,
+    color: COLORS.body,
+    fontSize: 12,
+    fontWeight: '700',
+    textAlign: 'center',
+    lineHeight: 20,
+  },
+  fallbackName: { flex: 1, color: COLORS.body, fontSize: 13 },
+  fallbackDist: { color: COLORS.muted, fontSize: 13, fontWeight: '600' },
+
   inputRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: 10,
     paddingHorizontal: 16,
-    paddingTop: 4,
+    paddingTop: 8,
   },
   input: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 22,
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    fontSize: 14,
-    color: '#1F2933',
+    backgroundColor: COLORS.bg,
+    borderRadius: RADIUS.pill,
+    paddingHorizontal: 18,
+    paddingVertical: 12,
+    fontSize: 15,
+    color: COLORS.ink,
+    borderWidth: 1,
+    borderColor: COLORS.lineStrong,
   },
   sendButton: {
-    width: 42,
-    height: 42,
-    borderRadius: 21,
-    backgroundColor: '#2E86AB',
+    width: 44,
+    height: 44,
+    borderRadius: RADIUS.pill,
+    backgroundColor: COLORS.brand,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  sendButtonDisabled: { backgroundColor: '#9FB3C8' },
+  sendButtonDisabled: { backgroundColor: COLORS.muted },
 });
