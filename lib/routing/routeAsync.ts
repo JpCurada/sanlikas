@@ -2,28 +2,43 @@ import type { Feature, Point } from 'geojson';
 import type { LngLat } from '@/lib/geo/ncr';
 import type { FacilityProperties } from '@/lib/facilities/types';
 import { findSafestCenterOnGraph, type SafestCenterResult } from './centerSelection';
-import { loadPedestrianGraph } from './graph';
+import { getCachedGraph } from './graphCache';
 import type { HazardContext } from './hazardCost';
 import { computeRouteOnGraph } from './route';
-import type { RoutePath } from './types';
+import type { PedestrianGraph, RoutePath } from './types';
 
-/** Asset-loading wrappers around the pure routing core (route.ts / centerSelection.ts). */
+/**
+ * Routing wrappers over the pure core. These read the graph from graphCache and
+ * do NOT import the bundled-asset loader (graph.ts, which pulls in expo-asset) —
+ * keeping this module importable in plain Node (the agent CLI, tests).
+ *
+ * The graph must be loaded into the cache before calling these:
+ *  - App:   ensureGraphLoaded() (graphLoader.ts) on first routing need.
+ *  - CLI/tests: __setGraphForTest() injects it directly.
+ */
+function requireGraph(): PedestrianGraph {
+  const g = getCachedGraph();
+  if (!g) {
+    throw new Error(
+      'Pedestrian graph not loaded. Call ensureGraphLoaded() (app) or inject via __setGraphForTest (tests).',
+    );
+  }
+  return g;
+}
 
-export async function computeRoute(
+export function computeRoute(
   origin: LngLat,
   destination: LngLat,
   ctx: HazardContext,
 ): Promise<RoutePath> {
-  const graph = await loadPedestrianGraph();
-  return computeRouteOnGraph(graph, origin, destination, ctx);
+  return Promise.resolve(computeRouteOnGraph(requireGraph(), origin, destination, ctx));
 }
 
-export async function findSafestCenter(
+export function findSafestCenter(
   origin: LngLat,
   facilities: Feature<Point, FacilityProperties>[],
   ctx: HazardContext,
   k?: number,
 ): Promise<SafestCenterResult> {
-  const graph = await loadPedestrianGraph();
-  return findSafestCenterOnGraph(graph, origin, facilities, ctx, k);
+  return Promise.resolve(findSafestCenterOnGraph(requireGraph(), origin, facilities, ctx, k));
 }

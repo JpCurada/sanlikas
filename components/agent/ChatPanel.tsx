@@ -13,9 +13,9 @@ import { Icon } from '@/components/Icon';
 import type { FacilityProperties } from '@/lib/facilities/types';
 import type { LngLat } from '@/lib/geo/ncr';
 import type { HazardZone, RoutePath } from '@/lib/routing/types';
-import { isRainWarningActive } from '@/lib/hazards/seed';
 import { fetchActiveHazards } from '@/lib/hazards/source';
 import { runAgentTurn } from '@/lib/agent/loop';
+import { ensureGraphLoaded } from '@/lib/routing/graph';
 import { GEMINI_API_KEY, GEMINI_KEY_PRESENT } from '@/lib/agent/config';
 import type { AgentContext, NearestCenter } from '@/lib/agent/types';
 import { COLORS, RADIUS, SHADOW } from '@/lib/theme';
@@ -84,12 +84,13 @@ export function ChatPanel({
         return;
       }
 
+      // Load the pedestrian graph into the cache before the agent routes.
+      await ensureGraphLoaded();
       const { hazards } = await fetchActiveHazards(origin);
       const ctx: AgentContext = {
         origin,
         facilities,
         hazards: hazards as HazardZone[],
-        rainWarningActive: isRainWarningActive(),
       };
 
       try {

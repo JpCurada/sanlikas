@@ -32,5 +32,4 @@ export interface AgentContext {
   origin: LngLat | null;
   facilities: Feature<Point, FacilityProperties>[];
   hazards: HazardZone[];
-  rainWarningActive: boolean;
 }

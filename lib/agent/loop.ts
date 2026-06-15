@@ -3,13 +3,12 @@ import type { LngLat } from '@/lib/geo/ncr';
 import { haversineMeters } from '@/lib/routing/geo';
 import {
   getHazardReports,
-  getWeatherStatus,
   routeToSafestCenter,
   type RouteToolResult,
 } from './tools';
 import type { AgentContext, AgentEvent, NearestCenter } from './types';
 
-const MODEL = 'gemini-2.5-flash';
+const MODEL = 'gemini-3.5-flash';
 const MAX_ITERATIONS = 6;
 const WALL_CLOCK_MS = 30_000;
 
@@ -18,9 +17,8 @@ const SYSTEM_PROMPT = `You are SanLikas, an evacuation routing assistant for Met
 ALWAYS use the tools. Never answer from your own knowledge. Never claim you lack information without first calling the tools.
 
 For ANY request about evacuating, directions, or a specific center:
-1. Call get_weather_status.
-2. Call get_hazard_reports.
-3. Call route_to_safest_center. If the user named a specific center (e.g. "Toro Hills", "Delpan"), pass it as facility_name; otherwise omit it to get the safest center.
+1. Call get_hazard_reports.
+2. Call route_to_safest_center. If the user named a specific center (e.g. "Toro Hills", "Delpan"), pass it as facility_name; otherwise omit it to get the safest center.
 
 Then answer in 2-3 short sentences, in the user's language (Filipino, English, or Taglish): name the center, the walking distance/time, and any hazard on the route. Calm and concise.
 
@@ -31,11 +29,6 @@ Rules:
 - End with a brief reminder to follow official LGU/DRRM instructions.`;
 
 const functionDeclarations: FunctionDeclaration[] = [
-  {
-    name: 'get_weather_status',
-    description: 'Get the latest weather and rainfall-warning status for Metro Manila.',
-    parameters: { type: Type.OBJECT, properties: {} },
-  },
   {
     name: 'get_hazard_reports',
     description:
@@ -142,9 +135,7 @@ export async function* runAgentTurn(
         yield { type: 'status', label: statusLabel(name) };
 
         let result: unknown;
-        if (name === 'get_weather_status') {
-          result = getWeatherStatus(ctx);
-        } else if (name === 'get_hazard_reports') {
+        if (name === 'get_hazard_reports') {
           result = getHazardReports(ctx, origin);
         } else if (name === 'route_to_safest_center') {
           const args = (part.functionCall!.args ?? {}) as { facility_name?: string };
@@ -188,8 +179,6 @@ export async function* runAgentTurn(
 
 function statusLabel(toolName: string): string {
   switch (toolName) {
-    case 'get_weather_status':
-      return 'Tinitingnan ang panahon…';
     case 'get_hazard_reports':
       return 'Sinusuri ang mga ulat ng panganib…';
     case 'route_to_safest_center':

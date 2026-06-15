@@ -8,14 +8,16 @@ import type { HazardZone } from './types';
  */
 export const HARD_BLOCK = Infinity;
 export const SOFT_PENALTY = 10;
-export const FLOOD_ACTIVE = 3; // flood-prone edge while a rain warning is active
-export const FLOOD_LATENT = 1.2; // flood-prone edge in calm weather
+/**
+ * Static penalty for roads in 100-year flood-susceptibility zones (real terrain
+ * data). A mild, weather-independent preference to route out of flood-prone
+ * areas when a clean detour is cheap. (No live weather feed is used.)
+ */
+export const FLOOD_PRONE = 1.4;
 export const CLEAN = 1;
 
 export interface HazardContext {
   hazards: HazardZone[];
-  /** PAGASA Heavy Rainfall Warning active for NCR — raises flood-edge penalty. */
-  rainWarningActive: boolean;
 }
 
 export interface EdgeCost {
@@ -57,7 +59,7 @@ export function edgeCost(
   }
 
   if (floodRisk) {
-    multiplier *= ctx.rainWarningActive ? FLOOD_ACTIVE : FLOOD_LATENT;
+    multiplier *= FLOOD_PRONE;
   }
 
   return { cost: meters * multiplier, hazardsHit };

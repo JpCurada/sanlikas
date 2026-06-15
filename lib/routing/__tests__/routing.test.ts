@@ -77,7 +77,7 @@ function haversine([lon1, lat1]: LngLat, [lon2, lat2]: LngLat): number {
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
-const NO_HAZARDS: HazardContext = { hazards: [], rainWarningActive: false };
+const NO_HAZARDS: HazardContext = { hazards: [] };
 
 describe('edgeCost', () => {
   const a: LngLat = [120.985, 14.605];
@@ -89,7 +89,7 @@ describe('edgeCost', () => {
 
   it('hard-blocks an edge through a hazard core', () => {
     const hz: HazardZone = mkHazard([120.987, 14.605], 200, 400);
-    const { cost, hazardsHit } = edgeCost(a, b, 100, 0, { hazards: [hz], rainWarningActive: false });
+    const { cost, hazardsHit } = edgeCost(a, b, 100, 0, { hazards: [hz] });
     expect(cost).toBe(Infinity);
     expect(hazardsHit).toHaveLength(1);
   });
@@ -97,13 +97,14 @@ describe('edgeCost', () => {
   it('applies 10x in the soft-penalty ring', () => {
     // Hazard centered ~300 m north of the edge: outside hard (200) but inside soft (500).
     const hz: HazardZone = mkHazard([120.987, 14.6077], 200, 500);
-    const { cost } = edgeCost(a, b, 100, 0, { hazards: [hz], rainWarningActive: false });
+    const { cost } = edgeCost(a, b, 100, 0, { hazards: [hz] });
     expect(cost).toBe(1000);
   });
 
-  it('raises flood-prone edges when a rain warning is active', () => {
-    expect(edgeCost(a, b, 100, 1, { hazards: [], rainWarningActive: true }).cost).toBe(300);
-    expect(edgeCost(a, b, 100, 1, { hazards: [], rainWarningActive: false }).cost).toBeCloseTo(120);
+  it('applies the static flood-prone penalty to flood-risk edges', () => {
+    // floodRisk=1 -> 100m * FLOOD_PRONE (1.4) = 140; floodRisk=0 stays 100.
+    expect(edgeCost(a, b, 100, 1, { hazards: [] }).cost).toBeCloseTo(140);
+    expect(edgeCost(a, b, 100, 0, { hazards: [] }).cost).toBe(100);
   });
 });
 
@@ -123,7 +124,7 @@ describe('aStar', () => {
 
   it('detours via the north row when a flood blocks the direct path', () => {
     const flood = mkHazard(midpoint(coords.S1, coords.S2), 250, 450);
-    const r = aStar(graph, startId, goalId, { hazards: [flood], rainWarningActive: true })!;
+    const r = aStar(graph, startId, goalId, { hazards: [flood] })!;
     const names = r.path.map((i) => nameOf(coords, graph.nodes[i]));
     expect(names).toEqual(['S0', 'N0', 'N1', 'N2', 'N3', 'S3']);
     expect(r.crossedHazards).toHaveLength(0); // detour is clean
@@ -135,7 +136,7 @@ describe('aStar', () => {
     // but penalized — A* must return a compromised path rather than null.
     const f1 = mkHazard(offsetNorth(midpoint(coords.S1, coords.S2), -0.0012), 50, 400);
     const f2 = mkHazard(offsetNorth(midpoint(coords.N1, coords.N2), 0.0012), 50, 400);
-    const r = aStar(graph, startId, goalId, { hazards: [f1, f2], rainWarningActive: false })!;
+    const r = aStar(graph, startId, goalId, { hazards: [f1, f2] })!;
     expect(r).not.toBeNull();
     expect(r.crossedHazards.length).toBeGreaterThan(0);
   });
@@ -144,7 +145,7 @@ describe('aStar', () => {
     // Hard radius covers the middle edge of both rows — genuinely unreachable.
     const f1 = mkHazard(midpoint(coords.S1, coords.S2), 250, 400);
     const f2 = mkHazard(midpoint(coords.N1, coords.N2), 250, 400);
-    expect(aStar(graph, startId, goalId, { hazards: [f1, f2], rainWarningActive: false })).toBeNull();
+    expect(aStar(graph, startId, goalId, { hazards: [f1, f2] })).toBeNull();
   });
 
   it('returns null when the goal is disconnected', () => {
@@ -171,7 +172,7 @@ describe('findSafestCenter', () => {
 
   it('picks a farther but clean center when the nearest route is hazardous', () => {
     const flood = mkHazard(midpoint(coords.S1, coords.S2), 250, 450);
-    const ctx: HazardContext = { hazards: [flood], rainWarningActive: true };
+    const ctx: HazardContext = { hazards: [flood] };
     const res = findSafestCenterOnGraph(graph, coords.S0, [near, far], ctx);
     // near-S3 is closer straight-line, but its only clean route detours north;
     // the chosen route must be clean regardless of which center.

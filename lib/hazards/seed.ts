@@ -26,17 +26,10 @@ export const SEED_HAZARDS: HazardZone[] = [
   },
 ];
 
-/** PAGASA Heavy Rainfall Warning state for the demo (raises flood-edge cost). */
-export const SEED_RAIN_WARNING_ACTIVE = true;
-
 /**
- * Active hazards the router/agent should consider. For the demo this returns the
- * seed set; later this becomes a Supabase query filtered by recency/proximity.
+ * Active hazards the router/agent should consider. Offline fallback only; the
+ * app fetches live authority reports from Supabase via fetchActiveHazards().
  */
 export function getActiveHazards(): HazardZone[] {
   return SEED_HAZARDS;
-}
-
-export function isRainWarningActive(): boolean {
-  return SEED_RAIN_WARNING_ACTIVE;
 }

@@ -14,24 +14,6 @@ import type { AgentContext } from './types';
  * summary, not the polyline coordinates).
  */
 
-export interface WeatherResult {
-  status: 'ok' | 'unavailable';
-  rainWarningActive?: boolean;
-  summary?: string;
-}
-
-export function getWeatherStatus(ctx: AgentContext): WeatherResult {
-  // Seed-backed for the demo (design §6 reserves the PAGASA scrape). Always "ok"
-  // here; the real tool returns "unavailable" when the cache is stale/missing.
-  return {
-    status: 'ok',
-    rainWarningActive: ctx.rainWarningActive,
-    summary: ctx.rainWarningActive
-      ? 'PAGASA: Heavy Rainfall Warning in effect over Metro Manila.'
-      : 'PAGASA: no rainfall warning currently in effect.',
-  };
-}
-
 export interface HazardReportsResult {
   status: 'ok' | 'empty' | 'unavailable';
   reports?: Array<{ kind: string; description: string; severity: number }>;
@@ -82,10 +64,7 @@ export async function routeToSafestCenter(
   origin: LngLat,
   facilityName?: string,
 ): Promise<RouteToolResult> {
-  const hazardCtx: HazardContext = {
-    hazards: ctx.hazards,
-    rainWarningActive: ctx.rainWarningActive,
-  };
+  const hazardCtx: HazardContext = { hazards: ctx.hazards };
 
   // If the user named a specific center, route directly to it (hazard-aware).
   if (facilityName && facilityName.trim()) {
