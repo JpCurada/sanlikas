@@ -23,7 +23,8 @@ import {
 } from '@/lib/facilities/types';
 import type { LngLat } from '@/lib/geo/ncr';
 import type { RoutePath } from '@/lib/routing/types';
-import { DEMO_ORIGIN, getActiveHazards } from '@/lib/hazards/seed';
+import { DEMO_ORIGIN } from '@/lib/hazards/seed';
+import { useHazards } from '@/lib/hazards/useHazards';
 import { useUserLocation } from '@/lib/location/useUserLocation';
 import { MAPBOX_TOKEN_PRESENT } from '@/lib/map/mapbox';
 import { useLayersStore } from '@/lib/state/layers';
@@ -64,7 +65,10 @@ export default function MapScreen() {
   const location = useUserLocation();
 
   const facilities = useMemo(() => flattenFacilities(layers), [layers]);
-  const hazards = useMemo(() => getActiveHazards(), []);
+
+  // Live hazard state: initial fetch + Supabase Realtime, so the map's hazard
+  // buffers update the moment an authority files or resolves a report.
+  const { hazards } = useHazards(location.origin);
 
   useEffect(() => {
     let cancelled = false;
