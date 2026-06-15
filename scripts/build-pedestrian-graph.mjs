@@ -11,7 +11,7 @@
  * corridor-subgraph upgrade for later scale; not needed for NCR-only.)
  *
  * Usage:  node scripts/build-pedestrian-graph.mjs
- * Output: assets/graph/ncr-pedestrian-graph.json
+ * Output: assets/graph/ncr-pedestrian-graph.graphjson
  *
  * Adapted from the LIKAS pedestrian-graph generator (walkable highway classes,
  * haversine edge metres) but sourced directly from the .pbf rather than MBTiles.
@@ -34,7 +34,7 @@ const ROOT = path.resolve(__dirname, '..');
 
 const PBF_PATH = path.join(ROOT, 'data/maps/philippines-260611.osm.pbf');
 const FLOOD_PATH = path.join(ROOT, 'data/maps/MetroManila_Flood_100year.json');
-const OUT_PATH = path.join(ROOT, 'assets/graph/ncr-pedestrian-graph.json');
+const OUT_PATH = path.join(ROOT, 'assets/graph/ncr-pedestrian-graph.graphjson');
 
 // NCR bbox (mirrors lib/geo/ncr.ts NCR_SW / NCR_NE).
 const BBOX = { minLon: 120.9, minLat: 14.3, maxLon: 121.15, maxLat: 14.8 };

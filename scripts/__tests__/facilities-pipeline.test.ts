@@ -69,7 +69,7 @@ describe('isNcrRecord', () => {
 });
 
 describe('buildFacilityCollections', () => {
-  it('filters to NCR, skips malformed coordinates, and dedupes across files', () => {
+  it('keeps nationwide records, skips malformed coordinates, and dedupes across files', () => {
     const ncrSchool = record({ osm_id: 100, name: 'NCR School' });
     const davaoSchool = record({
       osm_id: 101,
@@ -90,7 +90,8 @@ describe('buildFacilityCollections', () => {
     // evacuation.json is processed first, so it wins the duplicate.
     expect(collections.evacuation.features).toHaveLength(1);
     expect(collections.evacuation.features[0]!.properties.name).toBe('NCR School (evac)');
-    expect(collections.school.features).toHaveLength(0);
+    expect(collections.school.features).toHaveLength(1);
+    expect(collections.school.features[0]!.properties.name).toBe('Davao School');
     expect(warnings.duplicatesDropped).toHaveLength(1);
     expect(warnings.duplicatesDropped[0]).toContain('NCR School');
     expect(warnings.malformedCoordinates).toHaveLength(1);

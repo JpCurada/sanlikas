@@ -1,6 +1,6 @@
 import { useCallback, useState } from 'react';
 import * as Location from 'expo-location';
-import { isInNcr, NCR_CENTER, type LngLat } from '@/lib/geo/ncr';
+import { isInPhilippines, PH_CENTER, type LngLat } from '@/lib/geo/ncr';
 
 export type LocationState =
   | { status: 'idle' }
@@ -31,7 +31,7 @@ export function useUserLocation() {
       });
       const coordinate: LngLat = [pos.coords.longitude, pos.coords.latitude];
       setState(
-        isInNcr(coordinate)
+        isInPhilippines(coordinate)
           ? { status: 'ok', coordinate, label: 'Kasalukuyang lokasyon' }
           : { status: 'outside-ncr', coordinate },
       );
@@ -52,5 +52,5 @@ export function useUserLocation() {
   const originLabel: string | null =
     state.status === 'ok' || state.status === 'manual' ? state.label : null;
 
-  return { state, origin, originLabel, request, setManual, defaultPin: NCR_CENTER };
+  return { state, origin, originLabel, request, setManual, defaultPin: PH_CENTER };
 }

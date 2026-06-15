@@ -79,7 +79,7 @@ async function main() {
   // Load the bundled graph the same way the app does, then inject it.
   console.log('Loading NCR pedestrian graph...');
   const raw = JSON.parse(
-    fs.readFileSync(path.join(ROOT, 'assets/graph/ncr-pedestrian-graph.json'), 'utf8'),
+    fs.readFileSync(path.join(ROOT, 'assets/graph/ncr-pedestrian-graph.graphjson'), 'utf8'),
   );
   const adjacency: PedestrianGraph['adjacency'] = raw.nodes.map(() => []);
   for (const [a, b, m, f] of raw.edges) {

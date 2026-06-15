@@ -156,7 +156,6 @@ export function buildFacilityCollections(
         warnings.malformedCoordinates.push(label);
         continue;
       }
-      if (!isNcrRecord(record, coords)) continue;
       const key = `${record.osm_type ?? 'unknown'}/${record.osm_id ?? 'unknown'}`;
       if (seen.has(key)) {
         warnings.duplicatesDropped.push(label);

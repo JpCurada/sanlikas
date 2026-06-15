@@ -6,7 +6,6 @@ import { Icon } from '@/components/Icon';
 import { LoadingOverlay } from '@/components/LoadingOverlay';
 import { FacilityPopup } from '@/components/map/FacilityPopup';
 import { LayerControl } from '@/components/map/LayerControl';
-import { Legend } from '@/components/map/Legend';
 import { MapErrorBoundary } from '@/components/map/MapErrorBoundary';
 import { Notice } from '@/components/map/Notice';
 import { SanLikasMap, type MapHandle } from '@/components/map/SanLikasMap';
@@ -70,6 +69,11 @@ export default function MapScreen() {
   // Live hazard state: initial fetch + Supabase Realtime, so the map's hazard
   // buffers update the moment an authority files or resolves a report.
   const { hazards } = useHazards(location.origin);
+
+  useEffect(() => {
+    if (!location.origin || route) return;
+    mapHandle.current?.focusOn(location.origin);
+  }, [location.origin, route]);
 
   useEffect(() => {
     let cancelled = false;
@@ -185,9 +189,30 @@ export default function MapScreen() {
         </SanLikasMap>
       </MapErrorBoundary>
 
-      {mapReady && <Legend visible={visible} />}
+      {route && destination && (
+        <View style={[styles.routeBanner, { top: insets.top + 8 }]}>
+          <View style={styles.routeTextWrap}>
+            <Text style={styles.routeTitle} numberOfLines={1}>
+              Route to {destination.name}
+            </Text>
+            <Text style={styles.routeMeta}>
+              {(route.distanceMeters / 1000).toFixed(1)} km • ~{route.durationMinutesWalking} min walking
+            </Text>
+          </View>
+          <Pressable
+            style={styles.routeClose}
+            onPress={() => {
+              setRoute(null);
+              setDestination(null);
+            }}
+            accessibilityLabel="Clear route"
+          >
+            <Icon name="close" size={18} color={COLORS.white} />
+          </Pressable>
+        </View>
+      )}
 
-      <View style={[styles.actions, { top: insets.top + 8 }]}>
+      <View style={[styles.actions, { top: insets.top + (route ? 74 : 8) }]}>
         <Pressable
           style={styles.actionButton}
           onPress={() => setPanelOpen((open) => !open)}
@@ -236,11 +261,11 @@ export default function MapScreen() {
           }}
           onUseDemoLocation={() => {
             location.setManual(DEMO_ORIGIN, 'Demo (Sampaloc, Manila)');
-            mapHandle.current?.fitTo([DEMO_ORIGIN]);
+            mapHandle.current?.focusOn(DEMO_ORIGIN);
           }}
           onPickLocation={(coordinate, name) => {
             location.setManual(coordinate, name);
-            mapHandle.current?.fitTo([coordinate]);
+            mapHandle.current?.focusOn(coordinate);
           }}
           locationPending={location.state.status === 'requesting'}
         />
@@ -270,6 +295,43 @@ const styles = StyleSheet.create({
     position: 'absolute',
     right: 16,
     gap: 10,
+  },
+  routeBanner: {
+    position: 'absolute',
+    left: 16,
+    right: 16,
+    minHeight: 56,
+    borderRadius: RADIUS.sm,
+    backgroundColor: 'rgba(11, 29, 42, 0.92)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.12)',
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingLeft: 14,
+    paddingRight: 8,
+    ...SHADOW.floating,
+  },
+  routeTextWrap: {
+    flex: 1,
+    paddingRight: 10,
+  },
+  routeTitle: {
+    color: COLORS.white,
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  routeMeta: {
+    color: 'rgba(255, 255, 255, 0.74)',
+    fontSize: 11,
+    marginTop: 3,
+  },
+  routeClose: {
+    width: 34,
+    height: 34,
+    borderRadius: RADIUS.pill,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.14)',
   },
   actionButton: {
     width: 46,

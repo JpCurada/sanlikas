@@ -56,7 +56,7 @@ function main(): void {
   fs.mkdirSync(OUTPUT_DIR, { recursive: true });
 
   let emptyLayers = 0;
-  console.log('[build-facilities] NCR facility counts per layer:');
+  console.log('[build-facilities] facility counts per layer:');
   for (const type of FACILITY_TYPES) {
     const collection = collections[type];
     const outFile = path.join(OUTPUT_DIR, `${type}.geojson`);

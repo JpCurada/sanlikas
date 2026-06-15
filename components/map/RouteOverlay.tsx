@@ -37,9 +37,19 @@ export function RouteOverlay({ origin, route, destination, hazards }: RouteOverl
       {route && (
         <Mapbox.ShapeSource id="route-line" shape={lineFeature(route.coordinates)}>
           <Mapbox.LineLayer
+            id="route-line-casing"
+            style={{
+              lineColor: '#FFFFFF',
+              lineWidth: 9,
+              lineOpacity: 0.9,
+              lineCap: 'round',
+              lineJoin: 'round',
+            }}
+          />
+          <Mapbox.LineLayer
             id="route-line-layer"
             style={{
-              lineColor: route.compromised ? '#F3A712' : '#2E86AB',
+              lineColor: route.compromised ? '#F3A712' : '#158F64',
               lineWidth: 5,
               lineCap: 'round',
               lineJoin: 'round',

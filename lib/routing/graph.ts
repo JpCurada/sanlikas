@@ -21,7 +21,7 @@ export function loadPedestrianGraph(): Promise<PedestrianGraph> {
   if (loading) return loading;
 
   loading = (async () => {
-    const asset = Asset.fromModule(require('@/assets/graph/ncr-pedestrian-graph.json'));
+    const asset = Asset.fromModule(require('@/assets/graph/ncr-pedestrian-graph.graphjson'));
     await asset.downloadAsync();
     const uri = asset.localUri ?? asset.uri;
     if (!uri) throw new Error('pedestrian graph asset has no readable URI');

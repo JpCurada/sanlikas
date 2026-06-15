@@ -2,13 +2,11 @@ import React, { useCallback, useRef } from 'react';
 import { StyleSheet } from 'react-native';
 import Mapbox, { STYLE_URL_2D, STYLE_URL_3D } from '@/lib/map/mapbox';
 import {
-  clampToNcr,
-  NCR_CENTER,
+  clampToPhilippines,
   NCR_DEFAULT_PITCH,
-  NCR_INITIAL_ZOOM,
-  NCR_MAX_BOUNDS,
   NCR_MAX_ZOOM,
-  NCR_MIN_ZOOM,
+  PH_CENTER,
+  PH_MAX_BOUNDS,
   type LngLat,
 } from '@/lib/geo/ncr';
 import type { FacilityLayerState, FacilityType } from '@/lib/facilities/types';
@@ -17,6 +15,8 @@ import { FacilityLayers, type FacilityPressEvent } from './FacilityLayers';
 export interface MapHandle {
   /** Fit the camera to a set of coordinates (used to frame a new route). */
   fitTo: (coords: LngLat[]) => void;
+  /** Center and zoom the camera on one coordinate (used after setting origin). */
+  focusOn: (coord: LngLat) => void;
 }
 
 interface SanLikasMapProps {
@@ -54,7 +54,7 @@ export function SanLikasMap({
   const handleClusterPress = useCallback((coordinates: [number, number], zoom: number) => {
     // Clamp before animating — maxBounds and flyTo fight otherwise (playbook).
     cameraRef.current?.setCamera({
-      centerCoordinate: clampToNcr(coordinates),
+      centerCoordinate: clampToPhilippines(coordinates),
       zoomLevel: Math.min(zoom + 0.5, NCR_MAX_ZOOM),
       animationDuration: 500,
     });
@@ -62,6 +62,14 @@ export function SanLikasMap({
 
   if (handleRef) {
     handleRef.current = {
+      focusOn: (coord: LngLat) => {
+        cameraRef.current?.setCamera({
+          centerCoordinate: clampToPhilippines(coord),
+          zoomLevel: 15,
+          pitch: is3d ? NCR_DEFAULT_PITCH : 0,
+          animationDuration: 700,
+        });
+      },
       fitTo: (coords: LngLat[]) => {
         if (coords.length === 0) return;
         let minLon = Infinity;
@@ -75,8 +83,8 @@ export function SanLikasMap({
           if (lat > maxLat) maxLat = lat;
         }
         cameraRef.current?.fitBounds(
-          clampToNcr([maxLon, maxLat]),
-          clampToNcr([minLon, minLat]),
+          clampToPhilippines([maxLon, maxLat]),
+          clampToPhilippines([minLon, minLat]),
           [80, 80, 280, 80],
           700,
         );
@@ -107,12 +115,12 @@ export function SanLikasMap({
     >
       <Mapbox.Camera
         ref={cameraRef}
-        maxBounds={NCR_MAX_BOUNDS}
-        minZoomLevel={NCR_MIN_ZOOM}
+        maxBounds={PH_MAX_BOUNDS}
+        minZoomLevel={4}
         maxZoomLevel={NCR_MAX_ZOOM}
         defaultSettings={{
-          centerCoordinate: NCR_CENTER,
-          zoomLevel: NCR_INITIAL_ZOOM,
+          centerCoordinate: PH_CENTER,
+          zoomLevel: 5,
           pitch: is3d ? NCR_DEFAULT_PITCH : 0,
         }}
       />

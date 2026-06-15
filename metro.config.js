@@ -1,11 +1,11 @@
-// Metro config: treat generated .geojson facility layers as bundled assets
-// (loaded via expo-asset in lib/facilities/load.ts).
+// Metro config: treat generated facility and graph data as bundled assets
+// (loaded via expo-asset).
 const path = require('path');
 const { getDefaultConfig } = require('expo/metro-config');
 
 const config = getDefaultConfig(__dirname);
 
-config.resolver.assetExts = [...config.resolver.assetExts, 'geojson'];
+config.resolver.assetExts = [...config.resolver.assetExts, 'geojson', 'graphjson'];
 
 // likas/ is a separate reference repository — never bundle from it.
 // (Anchored to the absolute subdirectory; a bare /likas/ pattern would also

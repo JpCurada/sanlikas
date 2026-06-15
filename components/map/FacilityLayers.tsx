@@ -24,6 +24,7 @@ interface FacilityLayersProps {
 
 const CLUSTER_FILTER = ['has', 'point_count'] as const;
 const POINT_FILTER = ['!', ['has', 'point_count']] as const;
+const EVACUATION_ICON = 'shelter-15';
 
 function FacilityLayer({
   type,
@@ -94,17 +95,33 @@ function FacilityLayer({
           textAllowOverlap: true,
         }}
       />
-      <Mapbox.CircleLayer
-        id={`facility-points-${type}`}
-        filter={[...POINT_FILTER]}
-        style={{
-          circleColor: meta.color,
-          circleOpacity: 0.9,
-          circleRadius: 5,
-          circleStrokeWidth: 1.5,
-          circleStrokeColor: '#FFFFFF',
-        }}
-      />
+      {type === 'evacuation' ? (
+        <Mapbox.SymbolLayer
+          id="facility-points-evacuation"
+          filter={[...POINT_FILTER]}
+          style={{
+            iconImage: EVACUATION_ICON,
+            iconSize: 1.35,
+            iconColor: meta.color,
+            iconHaloColor: '#FFFFFF',
+            iconHaloWidth: 1.5,
+            iconAllowOverlap: true,
+            iconIgnorePlacement: true,
+          }}
+        />
+      ) : (
+        <Mapbox.CircleLayer
+          id={`facility-points-${type}`}
+          filter={[...POINT_FILTER]}
+          style={{
+            circleColor: meta.color,
+            circleOpacity: 0.9,
+            circleRadius: 5,
+            circleStrokeWidth: 1.5,
+            circleStrokeColor: '#FFFFFF',
+          }}
+        />
+      )}
     </Mapbox.ShapeSource>
   );
 }

@@ -7,8 +7,8 @@ import {
   type RouteToolResult,
 } from './tools';
 import type { AgentContext, AgentEvent, NearestCenter } from './types';
+import { GEMINI_MODEL } from './config';
 
-const MODEL = 'gemini-3.5-flash';
 const MAX_ITERATIONS = 6;
 const WALL_CLOCK_MS = 30_000;
 
@@ -81,6 +81,7 @@ export async function* runAgentTurn(
 
   // Captured for the UI route event when the routing tool runs.
   let pendingRouteUi: RouteToolResult['ui'] | null = null;
+  let routeEmitted = false;
 
   const deadline = Date.now() + WALL_CLOCK_MS;
 
@@ -97,7 +98,7 @@ export async function* runAgentTurn(
       }
 
       const response = await ai.models.generateContent({
-        model: MODEL,
+        model: GEMINI_MODEL,
         contents,
         config: {
           systemInstruction: SYSTEM_PROMPT,
@@ -115,7 +116,7 @@ export async function* runAgentTurn(
         // Final answer.
         const text = response.text ?? parts.map((p) => p.text ?? '').join('');
         if (text) yield { type: 'text', chunk: text };
-        if (pendingRouteUi) {
+        if (pendingRouteUi && !routeEmitted) {
           yield {
             type: 'route',
             route: pendingRouteUi.route,
@@ -123,6 +124,7 @@ export async function* runAgentTurn(
             compromised: pendingRouteUi.route.compromised,
             tradeoff: pendingRouteUi.tradeoff,
           };
+          routeEmitted = true;
         }
         yield { type: 'done' };
         return;
@@ -140,7 +142,19 @@ export async function* runAgentTurn(
         } else if (name === 'route_to_safest_center') {
           const args = (part.functionCall!.args ?? {}) as { facility_name?: string };
           const r = await routeToSafestCenter(ctx, origin, args.facility_name);
-          if (r.ui) pendingRouteUi = r.ui;
+          if (r.ui) {
+            pendingRouteUi = r.ui;
+            if (!routeEmitted) {
+              yield {
+                type: 'route',
+                route: r.ui.route,
+                facility: r.ui.facility,
+                compromised: r.ui.route.compromised,
+                tradeoff: r.ui.tradeoff,
+              };
+              routeEmitted = true;
+            }
+          }
           result = { status: r.status, summary: r.summary };
         } else {
           result = { status: 'unavailable', error: `unknown tool ${name}` };
@@ -155,19 +169,26 @@ export async function* runAgentTurn(
 
     // Ran out of iterations — summarize with what we have.
     if (pendingRouteUi) {
+      if (!routeEmitted) {
+        yield {
+          type: 'route',
+          route: pendingRouteUi.route,
+          facility: pendingRouteUi.facility,
+          compromised: pendingRouteUi.route.compromised,
+          tradeoff: pendingRouteUi.tradeoff,
+        };
+        routeEmitted = true;
+      }
       yield {
-        type: 'route',
-        route: pendingRouteUi.route,
-        facility: pendingRouteUi.facility,
-        compromised: pendingRouteUi.route.compromised,
-        tradeoff: pendingRouteUi.tradeoff,
+        type: 'text',
+        chunk: pendingRouteUi.tradeoff,
       };
-      yield { type: 'text', chunk: pendingRouteUi.tradeoff };
     } else {
       yield* emitFallback(origin, ctx);
     }
     yield { type: 'done' };
   } catch (err) {
+    console.warn('[agent] Gemini request failed:', err);
     yield {
       type: 'error',
       message: 'Hindi maabot ang AI assistant. Narito ang pinakamalapit na mga sentro:',
